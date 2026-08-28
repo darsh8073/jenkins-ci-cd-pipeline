@@ -28,15 +28,28 @@ pipeline {
                 '''
             }
         }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    docker build \
+                    -t jenkins-ci-cd-app:${BUILD_NUMBER} .
+                    
+                    docker tag \
+                    jenkins-ci-cd-app:${BUILD_NUMBER} \
+                    jenkins-ci-cd-app:latest
+                '''
+            }
+        }
     }
 
     post {
         success {
-            echo 'CI Pipeline completed successfully!'
+            echo 'CI/CD pipeline completed successfully!'
         }
 
         failure {
-            echo 'CI Pipeline failed!'
+            echo 'CI/CD pipeline failed!'
         }
     }
 }

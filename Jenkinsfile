@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_IMAGE = "darshan212/jenkins-ci-cd-app"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -34,12 +38,35 @@ pipeline {
             steps {
                 sh '''
                     docker build \
-                    -t jenkins-ci-cd-app:${BUILD_NUMBER} .
+                    -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .
 
                     docker tag \
-                    jenkins-ci-cd-app:${BUILD_NUMBER} \
-                    jenkins-ci-cd-app:latest
+                    ${DOCKER_IMAGE}:${BUILD_NUMBER} \
+                    ${DOCKER_IMAGE}:latest
                 '''
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | docker login \
+                        -u "$DOCKER_USERNAME" \
+                        --password-stdin
+
+                        docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        docker push ${DOCKER_IMAGE}:latest
+
+                        docker logout
+                    '''
+                }
             }
         }
 
@@ -52,7 +79,7 @@ pipeline {
                     docker run -d \
                     --name jenkins-ci-cd-app \
                     -p 5000:5000 \
-                    jenkins-ci-cd-app:${BUILD_NUMBER}
+                    ${DOCKER_IMAGE}:${BUILD_NUMBER}
                 '''
             }
         }
@@ -61,8 +88,7 @@ pipeline {
             steps {
                 sh '''
                     sleep 5
-
-                    curl --fail http://localhost:5000
+                    curl --fail http://localhost:5000/health
 
                     echo ""
                     echo "Application is healthy!"

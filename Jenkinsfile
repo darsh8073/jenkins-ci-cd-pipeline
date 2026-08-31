@@ -70,20 +70,29 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
-            steps {
-                sh '''
-                    docker stop jenkins-ci-cd-app || true
-                    docker rm jenkins-ci-cd-app || true
+ stage('Deploy') {
+    steps {
+        sh '''
+            echo "Pulling image from Docker Hub..."
 
-                    docker run -d \
-                    --name jenkins-ci-cd-app \
-                    -p 5000:5000 \
-                    ${DOCKER_IMAGE}:${BUILD_NUMBER}
-                '''
-            }
-        }
+            docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
 
+            echo "Stopping old container..."
+
+            docker stop jenkins-ci-cd-app || true
+            docker rm jenkins-ci-cd-app || true
+
+            echo "Starting new container..."
+
+            docker run -d \
+                --name jenkins-ci-cd-app \
+                -p 5000:5000 \
+                ${DOCKER_IMAGE}:${BUILD_NUMBER}
+
+            echo "Deployment completed!"
+        '''
+    }
+}
         stage('Health Check') {
             steps {
                 sh '''
